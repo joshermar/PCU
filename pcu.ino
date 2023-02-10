@@ -68,7 +68,9 @@ void loop() {
         for (;;) {
 
             if (SLEEP != current_mode && sleepTimer.isReady()) mode_switch(SLEEP);
+            
             if (NORMAL != current_mode) lcd.animate();
+            if (SLEEP == current_mode) fan.animateSleep();
 
             if ((ch = Serial.read()) >= 0) break;
         }
@@ -129,8 +131,9 @@ void mode_switch(pcumode new_mode) {
         break;
 
     case SLEEP:
+        lcd.setRGB(0, 0, 32);
         lcd.setAnimation("Zzzz", "...", 800);
-        fan.setRGB(8, 1, 0);
+        fan.setRGB(0, 0, 0);
         current_mode = SLEEP;
         break;
     }
