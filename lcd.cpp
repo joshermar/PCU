@@ -12,23 +12,23 @@ void LCD::start(void) {
 }
 
 void LCD::setRGB(uint8_t r, uint8_t g, uint8_t b) {
-    this->r = r;
-    this->g = g;
-    this->b = b;
-    robotLCD.setRGB(r, g, b);
+    rgb.r = r;
+    rgb.g = g;
+    rgb.b = b;
+    robotLCD.setRGB(rgb.r, rgb.g, rgb.b);
 }
 
 void LCD::saveRGB() {
-    EEPROM.put(EEPROM_LCD_R, r);
-    EEPROM.put(EEPROM_LCD_G, g);
-    EEPROM.put(EEPROM_LCD_B, b);
+    EEPROM.put(EEPROM_LCD_R, rgb.r);
+    EEPROM.put(EEPROM_LCD_G, rgb.g);
+    EEPROM.put(EEPROM_LCD_B, rgb.b);
 }
 
 void LCD::loadRGB() {
-    r = EEPROM.read(EEPROM_LCD_R);
-    g = EEPROM.read(EEPROM_LCD_G);
-    b = EEPROM.read(EEPROM_LCD_B);
-    setRGB(r, g, b);
+    rgb.r = EEPROM.read(EEPROM_LCD_R);
+    rgb.g = EEPROM.read(EEPROM_LCD_G);
+    rgb.b = EEPROM.read(EEPROM_LCD_B);
+    robotLCD.setRGB(rgb.r, rgb.g, rgb.b);
 }
 
 void LCD::setAnimation(char* baseStr, char* animStr, uint16_t animInterval) {
