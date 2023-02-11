@@ -6,7 +6,7 @@
 
 
 Fan::Fan() {
-    FastLED.addLeds<WS2811, FAN_DATAPIN, GRB>(leds, FAN_NUMLEDS);
+    FastLED.addLeds<WS2812B, FAN_LEDPIN, GRB>(leds, FAN_NUMLEDS);
 }
 
 void Fan::setRGB(uint8_t r, uint8_t g, uint8_t b) {
@@ -31,18 +31,6 @@ void Fan::loadRGB() {
     uint8_t b = EEPROM.read(EEPROM_FAN_B);
     setRGB(r, g, b);
 }
-
-// void Fan::setAnimation(animation a) {
-//     animSetting = a;
-//     animFrame = 0;
-
-//     if (NONE == a) {
-//         loadRGB();
-//     } else {
-//         setRGB(0, 0, 0);
-//     }
-
-// }
 
 
 void Fan::animateSleep(void) {

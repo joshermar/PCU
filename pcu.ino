@@ -7,54 +7,55 @@
 
 #define CHECK_TIMER(start, interval) (millis()-(start) >= (uint32_t)(interval))
 
-void mode_switch(pcumode);
 static void exec(char*);
-static void printres(response res);
+static void printResponse(Response res, char* detail);
 
 // Macro template for cmd declarations and array definition
 #define _COMMANDS       \
     _CMD(PCU_READY)     \
     _CMD(PCU_MODE)      \
-    _CMD(SET_SLEEP)     \
-    _CMD(FAN_SETRGB)    \
+    _CMD(PCU_SLEEP)     \
     _CMD(LCD_HOME)      \
     _CMD(LCD_CLEAR)     \
-    _CMD(LCD_SETRGB)    \
     _CMD(LCD_SETCUR)    \
     _CMD(LCD_PRINT)     \
+    _CMD(LCD_GETRGB)    \
+    _CMD(LCD_SETRGB)    \
+    _CMD(FAN_GETRGB)    \
+    _CMD(FAN_SETRGB)    \
     _CMD(RGB_SAVE)      \
     _CMD(RGB_LOAD)      \
 
 // Declare function prototypes
-#define _CMD(name) uint8_t cmd_##name(char *);
+#define _CMD(name) Response cmd_##name(const char*, char*);
 _COMMANDS
 #undef _CMD
 
 // Define array of CMD name-function pairs from macro template
 #define _CMD(name) {#name, cmd_##name},
 struct {
-    char *name;
+    char* name;
     void *f;
 } cmd_funcs[] = { _COMMANDS };
-
 
 static uint8_t sleep_timeout_secs;
 static uint32_t sleep_timer_start;
 
-pcumode current_mode;
+PCUMode current_mode;
 
 Timer sleepTimer;
 LCD lcd;
 Fan fan;
-
 
 void setup() {
     Serial.begin(BAUDRATE);
     lcd.start();
     fan.loadRGB();
 
-    mode_switch(IDLE);
-    printres(RES_READY);
+    delay(1000);  // Mobo takes a sec to power the ARGB header. Without this, FAN RGB stays off.
+
+    modeSwitch(MODE_IDLE);
+    printResponse(RES_READY, "");
 }
 
 void loop() {
@@ -67,10 +68,10 @@ void loop() {
 
         for (;;) {
 
-            if (SLEEP != current_mode && sleepTimer.isReady()) mode_switch(SLEEP);
+            if (MODE_SLEEP != current_mode && sleepTimer.isReady()) modeSwitch(MODE_SLEEP);
             
-            if (NORMAL != current_mode) lcd.animate();
-            if (SLEEP == current_mode) fan.animateSleep();
+            if (MODE_NORMAL != current_mode) lcd.animate();
+            if (MODE_SLEEP == current_mode) fan.animateSleep();
 
             if ((ch = Serial.read()) >= 0) break;
         }
@@ -104,48 +105,45 @@ void loop() {
         // Record and echo char
         cmdline[cmd_idx++] = ch;
         cmdline[cmd_idx] = '\0';
-        Serial.print((char *)&ch);
+        Serial.print((char*)&ch);
     }
 
     sleepTimer.reset();
 
     // Newline: PCU goes into NORMAL mode
-    if (current_mode != NORMAL) mode_switch(NORMAL);
+    if (current_mode != MODE_NORMAL) modeSwitch(MODE_NORMAL);
 
     if (cmd_idx) exec(cmdline);
 }
 
-
-void mode_switch(pcumode new_mode) {
+void modeSwitch(PCUMode new_mode) {
     switch(new_mode) {
 
-    case IDLE:
+    case MODE_IDLE:
         lcd.setAnimation("", ".....", 500);
-        current_mode = IDLE;
+        current_mode = MODE_IDLE;
         break;
 
-    case NORMAL:
-        lcd.clear();
+    case MODE_NORMAL:
         fan.loadRGB();
-        current_mode = NORMAL;
+        lcd.loadRGB();
+        lcd.clear();
+        current_mode = MODE_NORMAL;
         break;
 
-    case SLEEP:
+    case MODE_SLEEP:
         lcd.setRGB(0, 0, 32);
         lcd.setAnimation("Zzzz", "...", 800);
         fan.setRGB(0, 0, 0);
-        current_mode = SLEEP;
+        current_mode = MODE_SLEEP;
         break;
     }
-
 }
 
+static void exec(char* cmdline) {
 
-static void exec(char *cmdline) {
-    char *command = strtok(cmdline, " ");
-    char *args = strtok(NULL, "");
-
-    uint8_t (*cmd_f)(char *) = NULL;
+    char* command = strtok(cmdline, " ");
+    uint8_t (*cmd_f)(char*, char*) = NULL;
 
     for (int i=0; i<ARRLEN(cmd_funcs); i++) {
         if (0 == strcasecmp(command, cmd_funcs[i].name)) {
@@ -154,21 +152,34 @@ static void exec(char *cmdline) {
         }
     }
 
+    char* args = strtok(NULL, "");
+    char detail[64];
+    detail[0] = '\0';
+
     if (cmd_f) {
-        printres(cmd_f(args));
-    }
-    else {
-        printres(RES_BADCMD);
+        Response res = cmd_f(args, detail);
+        printResponse(res, detail);
+    } else {
+        printResponse(RES_ERROR, "Invalid command");
     }
 }
 
+static void printResponse(Response res, char* detail) {
+    switch(res) {
+    case RES_OK:
+        Serial.print("[OK]");
+        break;
+    case RES_READY:
+        Serial.print("[READY]");
+        break;
+    case RES_ERROR:
+        Serial.print("[ERROR]");
+        break;
+    }
 
-static void printres(response res) {
-    char *RES_STRS[] = {
-        [RES_OK]      = "[OK]",
-        [RES_READY]   = "[READY]",
-        [RES_BADCMD]  = "[ERROR]: Invalid command",
-        [RES_BADARGS] = "[ERROR]: Invalid argument(s)",
-    };
-    Serial.println(RES_STRS[res]);
+    if (strlen(detail)) {
+        Serial.print(": ");
+        Serial.print(detail);
+    }
+    Serial.println("");
 }

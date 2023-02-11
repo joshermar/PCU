@@ -29,6 +29,12 @@ private:
     uint32_t startMillis;
 };
 
+struct RGBValue {
+    uint8_t r;
+    uint8_t g;
+    uint8_t b;
+};
+
 enum {
     EEPROM_LCD_R,
     EEPROM_LCD_G,
@@ -38,21 +44,18 @@ enum {
     EEPROM_FAN_B,
 };
 
-enum response {
+enum Response {
     RES_OK = 0,
     RES_READY,
-    RES_BADCMD,
-    RES_BADARGS,
+    RES_ERROR,
 };
 
-enum pcumode {
-    IDLE,
-    NORMAL,
-    SLEEP,
+enum PCUMode {
+    MODE_IDLE,
+    MODE_NORMAL,
+    MODE_SLEEP,
 };
 
-
-void mode_switch(enum pcumode);
-
+void modeSwitch(PCUMode);
 
 #endif  /* COMMAND_H */
